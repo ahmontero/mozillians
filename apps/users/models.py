@@ -19,12 +19,14 @@ from elasticutils.contrib.django import tasks as elasticutilstasks
 from funfactory.urlresolvers import reverse
 from product_details import product_details
 from sorl.thumbnail import ImageField, get_thumbnail
+from south.modelsinspector import add_introspection_rules
 from tower import ugettext as _, ugettext_lazy as _lazy
 
 from apps.common.helpers import gravatar
 from apps.groups.models import (Group, GroupAlias,
                                 Skill, SkillAlias,
                                 Language, LanguageAlias)
+from apps.users.fields import MultiURLField
 
 
 from tasks import update_basket_task
@@ -42,6 +44,17 @@ PRIVACY_CHOICES = (# (PRIVILEGED, 'Privileged'),
                    # (EMPLOYEES, 'Employees'),
                    (MOZILLIANS, 'Mozillians'),
                    (PUBLIC, 'Public'))
+
+add_introspection_rules([
+    (
+        [MultiURLField],
+        [],
+        {
+            "max_fields": ["max_fields", {"default": 3}],
+            "delimiter": ["delimiter", {"default": ":::"}],
+        },
+    ),
+], ["^apps\.users\.fields\.MultiURLField"])
 
 
 def _calculate_photo_filename(instance, filename):
@@ -197,8 +210,8 @@ class UserProfile(UserProfilePrivacyModel, SearchMixin):
                                  verbose_name=_lazy(u'Full Name'))
     is_vouched = models.BooleanField(default=False)
     last_updated = models.DateTimeField(auto_now=True, default=datetime.now)
-    website = models.URLField(max_length=200, verbose_name=_lazy(u'Website'),
-                              default='', blank=True)
+    website = MultiURLField(max_length=200, verbose_name=_lazy(u'Website'),
+                              default='', blank=True, max_fields=5)
     vouched_by = models.ForeignKey('UserProfile', null=True, default=None,
                                    on_delete=models.SET_NULL, blank=True,
                                    related_name='vouchees')

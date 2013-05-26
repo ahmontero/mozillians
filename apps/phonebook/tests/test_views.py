@@ -310,7 +310,6 @@ class TestViews(ESTestCase):
         # No website URL is present.
         r = client.get(reverse('profile.edit'))
         doc = pq(r.content)
-
         assert not doc('#dd.website'), (
                 'No website info appears on the user\'s profile.')
 
@@ -318,13 +317,25 @@ class TestViews(ESTestCase):
         data = self.data_privacy_fields.copy()
         data.update(dict(full_name='foo', country='pl', website='tofumatt.com'))
         r = client.post(reverse('profile.edit'), data)
+        eq_(r.status_code, 400, 'Validator works and url is not valid')
+
+        # Add one url
+        data = self.data_privacy_fields.copy()
+        data.update(dict(full_name='foo', country='es', website='http://www.ctofumatt.com'))
+        r = client.post(reverse('profile.edit'), data)
         eq_(r.status_code, 302, 'Submission works and user is redirected.')
+
+        #Add several URLS
+        data = self.data_privacy_fields.copy()
+        data.update(dict(full_name='foo', country='es',
+            website='http://twitter.com\r\nhttp://www.facebook.com'))
+        r = client.post(reverse('profile.edit'), data)
+        eq_(r.status_code, 302, 'Submission works and user is redirected.')
+
         r = client.get(reverse('profile', args=[self.mozillian.username]))
         doc = pq(r.content)
-
-        assert ('http://tofumatt.com/' in
-                doc('#profile-info dd a[rel=me]')[0].get('href')), (
-            'User should have a URL with protocol added.')
+        assert len(doc('#profile-info dd a[rel=me]')) == 2, (
+                'There must be 2 URLS in the user profile.')
 
     def test_has_country(self):
         u = user(username='sam', full_name='sam')
